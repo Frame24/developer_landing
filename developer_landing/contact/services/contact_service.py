@@ -74,8 +74,8 @@ class ContactService:
             self.metrics_service.increment("emails_file_fallback")
 
         if not (email_result.owner_saved and email_result.user_saved):
-            logger.error("Failed to deliver both contact emails (smtp and file)")
-            raise ContactDeliveryError("Не удалось сохранить или отправить уведомления.")
+            # Contact is already stored in DB; do not fail the whole request.
+            logger.error("Failed to save contact email copies to file storage")
 
         return ContactProcessResult(
             contact=contact,

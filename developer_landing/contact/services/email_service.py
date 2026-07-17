@@ -45,6 +45,11 @@ class EmailService:
             ai_available=ai_available,
         )
 
+        # Always keep a local copy first (fast). SMTP is best-effort afterwards.
+        owner_ok = self._save_to_file("owner", owner_body)
+        user_ok = self._save_to_file("user", user_body)
+
+        sent_via_smtp = False
         if self._smtp_configured():
             try:
                 self._send_smtp(
@@ -57,20 +62,26 @@ class EmailService:
                     body=user_body,
                     to=[email],
                 )
-                return EmailResult(sent_via_smtp=True, owner_saved=True, user_saved=True)
+                sent_via_smtp = True
             except Exception:
-                logger.exception("SMTP send failed, falling back to file storage")
+                logger.exception("SMTP send failed, file copies already saved")
 
-        owner_ok = self._save_to_file("owner", owner_body)
-        user_ok = self._save_to_file("user", user_body)
         return EmailResult(
-            sent_via_smtp=False,
+            sent_via_smtp=sent_via_smtp,
             owner_saved=owner_ok,
             user_saved=user_ok,
         )
 
+    def is_configured(self) -> bool:
+        return bool(
+            settings.EMAIL_HOST
+            and settings.EMAIL_HOST_USER
+            and settings.EMAIL_HOST_PASSWORD
+            and settings.CONTACT_OWNER_EMAIL
+        )
+
     def _smtp_configured(self) -> bool:
-        return bool(settings.EMAIL_HOST and settings.CONTACT_OWNER_EMAIL)
+        return self.is_configured()
 
     def _send_smtp(self, *, subject: str, body: str, to: list[str]) -> None:
         message = EmailMultiAlternatives(

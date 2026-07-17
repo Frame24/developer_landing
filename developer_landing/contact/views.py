@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -10,8 +12,11 @@ from rest_framework.views import APIView
 from developer_landing.contact.serializers import ContactSerializer
 from developer_landing.contact.services.ai_service import AIService
 from developer_landing.contact.services.contact_service import ContactService
+from developer_landing.contact.services.email_service import EmailService
 from developer_landing.contact.services.metrics_service import MetricsService
 from developer_landing.contact.services.rate_limit_service import RateLimitService
+
+logger = logging.getLogger("developer_landing.contact")
 
 
 def _client_ip(request) -> str:
@@ -59,6 +64,7 @@ class ContactCreateView(APIView):
                 client_ip=client_ip,
             )
         except Exception:
+            logger.exception("Contact processing failed")
             return Response(
                 {
                     "success": False,
@@ -99,7 +105,7 @@ class HealthView(APIView):
                 "data": {
                     "status": "ok",
                     "ai_configured": ai.is_configured(),
-                    "smtp_configured": bool(settings.EMAIL_HOST),
+                    "smtp_configured": EmailService().is_configured(),
                     "debug": settings.DEBUG,
                 },
             },
