@@ -29,19 +29,19 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: CONTACT_OWNER_EMAIL
-        value: tabletka2404@gmail.com
+        value: hks9@yandex.ru
       - key: EMAIL_HOST
-        value: smtp.gmail.com
+        value: smtp.resend.com
       - key: EMAIL_PORT
         value: "587"
       - key: EMAIL_USE_TLS
         value: "True"
       - key: EMAIL_HOST_USER
-        value: tabletka2400@gmail.com
+        value: resend
       - key: EMAIL_HOST_PASSWORD
         sync: false
       - key: DJANGO_DEFAULT_FROM_EMAIL
-        value: Developer Landing <tabletka2400@gmail.com>
+        value: Developer Landing <onboarding@resend.dev>
       - key: CORS_ALLOW_ALL_ORIGINS
         value: "True"
       - key: RATE_LIMIT_MAX
