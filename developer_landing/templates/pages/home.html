@@ -79,7 +79,13 @@
         <h2>Обратная связь</h2>
         <p class="section-lead">Форма бьёт в <code>POST /api/contact</code>. AI классифицирует запрос и готовит ответ.</p>
 
-        <form id="contact-form" class="contact-form" novalidate>
+        <form
+          id="contact-form"
+          class="contact-form"
+          method="post"
+          action="/api/contact"
+          novalidate
+        >
           <div class="field">
             <label for="name">Имя</label>
             <input id="name" name="name" type="text" autocomplete="name" required maxlength="120" />
@@ -107,6 +113,14 @@
       <a href="/api/health">/api/health</a>
     </footer>
 
+    <script>
+      // Fallback: block native navigation even if landing.js fails to load.
+      document.getElementById("contact-form")?.addEventListener(
+        "submit",
+        (event) => event.preventDefault(),
+        true,
+      );
+    </script>
     <script src="{% static 'js/landing.js' %}"></script>
   </body>
 </html>

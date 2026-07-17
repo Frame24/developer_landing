@@ -285,7 +285,7 @@ CONTACT_OWNER_EMAIL=<ваш email>
 
 Free tier засыпает после простоя: первый запрос может идти 30–60 секунд.
 
-**Публичный URL:** будет добавлен после деплоя на Render (`https://developer-landing-xxxx.onrender.com`).
+**Публичный URL:** https://developer-landing-adae.onrender.com/
 
 Если деплой недоступен, достаточно локального запуска по инструкции выше + Postman/curl.
 

@@ -7,6 +7,8 @@
     return;
   }
 
+  const field = (id) => form.querySelector(`#${id}`);
+
   const setStatus = (message, type) => {
     statusEl.textContent = message;
     statusEl.classList.remove("is-error", "is-success");
@@ -17,14 +19,16 @@
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    event.stopPropagation();
+
     setStatus("Отправляем…", null);
     submitBtn.disabled = true;
 
     const payload = {
-      name: form.name.value.trim(),
-      phone: form.phone.value.trim(),
-      email: form.email.value.trim(),
-      comment: form.comment.value.trim(),
+      name: (field("name")?.value || "").trim(),
+      phone: (field("phone")?.value || "").trim(),
+      email: (field("email")?.value || "").trim(),
+      comment: (field("comment")?.value || "").trim(),
     };
 
     try {
@@ -69,7 +73,11 @@
         return;
       }
 
-      setStatus(data.error?.details || "Не удалось отправить. Попробуйте позже.", "is-error");
+      setStatus(
+        (typeof data.error?.details === "string" && data.error.details) ||
+          "Не удалось отправить. Попробуйте позже.",
+        "is-error",
+      );
     } catch (_error) {
       setStatus("Сеть недоступна. Проверьте соединение.", "is-error");
     } finally {
