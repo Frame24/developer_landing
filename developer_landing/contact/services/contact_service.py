@@ -23,6 +23,7 @@ class ContactProcessResult:
     request_type: str | None
     ai_reply: str | None
     email_via_smtp: bool
+    email_queued: bool = False
 
 
 class ContactService:
@@ -70,6 +71,8 @@ class ContactService:
         )
         if email_result.sent_via_smtp:
             self.metrics_service.increment("emails_sent")
+        elif email_result.smtp_queued:
+            self.metrics_service.increment("emails_smtp_queued")
         else:
             self.metrics_service.increment("emails_file_fallback")
 
@@ -83,4 +86,5 @@ class ContactService:
             request_type=ai_result.request_type,
             ai_reply=ai_result.reply,
             email_via_smtp=email_result.sent_via_smtp,
+            email_queued=email_result.smtp_queued,
         )

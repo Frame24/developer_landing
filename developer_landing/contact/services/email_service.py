@@ -16,6 +16,7 @@ class EmailResult:
     sent_via_smtp: bool
     owner_saved: bool
     user_saved: bool
+    smtp_queued: bool = False
 
 
 class EmailService:
@@ -45,12 +46,11 @@ class EmailService:
             ai_available=ai_available,
         )
 
-        # Always keep a local copy first (fast). SMTP is best-effort afterwards.
         owner_ok = self._save_to_file("owner", owner_body)
         user_ok = self._save_to_file("user", user_body)
 
         sent_via_smtp = False
-        if self._smtp_configured():
+        if self.is_configured():
             try:
                 self._send_smtp(
                     subject=f"[Contact] Новое обращение от {name}",
@@ -63,6 +63,11 @@ class EmailService:
                     to=[email],
                 )
                 sent_via_smtp = True
+                logger.info(
+                    "SMTP sent OK to owner=%s user=%s",
+                    settings.CONTACT_OWNER_EMAIL,
+                    email,
+                )
             except Exception:
                 logger.exception("SMTP send failed, file copies already saved")
 
@@ -70,6 +75,7 @@ class EmailService:
             sent_via_smtp=sent_via_smtp,
             owner_saved=owner_ok,
             user_saved=user_ok,
+            smtp_queued=False,
         )
 
     def is_configured(self) -> bool:

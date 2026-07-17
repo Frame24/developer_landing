@@ -85,6 +85,7 @@ class ContactCreateView(APIView):
                     "request_type": result.request_type,
                     "ai_reply": result.ai_reply,
                     "email_via_smtp": result.email_via_smtp,
+                    "email_queued": result.email_queued,
                     "rate_limit_remaining": rate.remaining,
                 },
             },
