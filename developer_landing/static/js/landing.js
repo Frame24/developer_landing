@@ -44,10 +44,14 @@
       const data = await response.json().catch(() => ({}));
 
       if (response.status === 201 && data.success) {
-        const aiNote = data.data?.ai_available
-          ? ` AI: ${data.data.request_type || "ok"}.`
-          : " AI временно недоступен, заявка всё равно принята.";
-        setStatus(`Спасибо! Обращение #${data.data.id} принято.${aiNote}`, "is-success");
+        const id = data.data?.id ?? "?";
+        let message = `Спасибо! Обращение #${id} принято.`;
+        if (data.data?.ai_available && data.data?.request_type) {
+          message += `\nAI статистика: +1 ${data.data.request_type}.`;
+        } else {
+          message += "\nAI статистика: тип не определён (AI недоступен).";
+        }
+        setStatus(message, "is-success");
         form.reset();
         return;
       }
