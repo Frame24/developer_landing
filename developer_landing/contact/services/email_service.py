@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
 import logging
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -72,12 +75,11 @@ class EmailService:
             },
         )
 
-        # SMTP runs inline here. Caller (ContactService) already schedules this
-        # work in a background thread, so nested daemon threads are avoided.
+        # Delivery runs inline. Caller already schedules this in a background thread.
         sent_via_smtp = False
         if self.is_configured():
             try:
-                self._send_smtp_pair(
+                self._send_pair(
                     owner_subject=f"[Contact] Новое обращение от {name}",
                     owner_body=owner_body,
                     user_subject="Мы получили ваше обращение",
@@ -86,13 +88,14 @@ class EmailService:
                 )
                 sent_via_smtp = True
                 logger.info(
-                    "SMTP sent to %s (original form email=%s)",
+                    "Email sent to %s (original form email=%s via=%s)",
                     delivery_to,
                     email,
+                    "resend_api" if self._uses_resend() else "smtp",
                 )
             except Exception:
                 logger.exception(
-                    "SMTP send failed (to=%s original=%s)",
+                    "Email send failed (to=%s original=%s)",
                     delivery_to,
                     email,
                 )
@@ -123,7 +126,12 @@ class EmailService:
     def _smtp_configured(self) -> bool:
         return self.is_configured()
 
-    def _send_smtp_pair(
+    @staticmethod
+    def _uses_resend() -> bool:
+        host = (settings.EMAIL_HOST or "").lower()
+        return "resend" in host
+
+    def _send_pair(
         self,
         *,
         owner_subject: str,
@@ -132,12 +140,42 @@ class EmailService:
         user_body: str,
         delivery_to: str,
     ) -> None:
+        # Resend SMTP (port 587) often times out behind VPN; HTTPS API is reliable.
+        send = self._send_resend_api if self._uses_resend() else self._send_smtp
+        send(subject=owner_subject, body=owner_body, to=[delivery_to])
+        send(subject=user_subject, body=user_body, to=[delivery_to])
+
+    def _send_resend_api(self, *, subject: str, body: str, to: list[str]) -> None:
+        payload = {
+            "from": settings.DEFAULT_FROM_EMAIL,
+            "to": to,
+            "subject": subject,
+            "text": body,
+        }
+        request = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=json.dumps(payload).encode("utf-8"),
+            method="POST",
+            headers={
+                "Authorization": f"Bearer {settings.EMAIL_HOST_PASSWORD}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                # Cloudflare blocks default urllib User-Agent (error 1010).
+                "User-Agent": (
+                    "developer-landing/1.0 "
+                    "(+https://github.com/Frame24/developer_landing)"
+                ),
+            },
+        )
+        timeout = int(getattr(settings, "EMAIL_TIMEOUT", 20) or 20)
         try:
-            self._send_smtp(subject=owner_subject, body=owner_body, to=[delivery_to])
-            self._send_smtp(subject=user_subject, body=user_body, to=[delivery_to])
-            logger.info("SMTP background send OK to %s (owner+user_reply)", delivery_to)
-        except Exception:
-            logger.exception("SMTP background send failed")
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                raw = response.read().decode("utf-8", errors="replace")
+                logger.info("Resend API OK status=%s body=%s", response.status, raw[:200])
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            logger.error("Resend API HTTP %s: %s", exc.code, detail)
+            raise
 
     def _send_smtp(self, *, subject: str, body: str, to: list[str]) -> None:
         message = EmailMultiAlternatives(
@@ -180,7 +218,7 @@ class EmailService:
         demo_note = ""
         if settings.EMAIL_DEMO_FORCE_TO:
             demo_note = (
-                f"[DEMO] SMTP доставка принудительно на {delivery_to} "
+                f"[DEMO] Доставка принудительно на {delivery_to} "
                 f"(Resend test mode без своего домена).\n"
                 f"Email из формы: {email}\n\n"
             )
