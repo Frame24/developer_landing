@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import threading
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -73,33 +72,36 @@ class EmailService:
             },
         )
 
-        smtp_queued = False
+        # SMTP runs inline here. Caller (ContactService) already schedules this
+        # work in a background thread, so nested daemon threads are avoided.
+        sent_via_smtp = False
         if self.is_configured():
-            smtp_queued = True
-            thread = threading.Thread(
-                target=self._send_smtp_pair,
-                kwargs={
-                    "owner_subject": f"[Contact] Новое обращение от {name}",
-                    "owner_body": owner_body,
-                    "user_subject": "Мы получили ваше обращение",
-                    "user_body": user_body,
-                    "delivery_to": delivery_to,
-                },
-                daemon=True,
-                name="contact-smtp",
-            )
-            thread.start()
-            logger.info(
-                "SMTP queued in background (forced_to=%s original=%s)",
-                delivery_to,
-                email,
-            )
+            try:
+                self._send_smtp_pair(
+                    owner_subject=f"[Contact] Новое обращение от {name}",
+                    owner_body=owner_body,
+                    user_subject="Мы получили ваше обращение",
+                    user_body=user_body,
+                    delivery_to=delivery_to,
+                )
+                sent_via_smtp = True
+                logger.info(
+                    "SMTP sent to %s (original form email=%s)",
+                    delivery_to,
+                    email,
+                )
+            except Exception:
+                logger.exception(
+                    "SMTP send failed (to=%s original=%s)",
+                    delivery_to,
+                    email,
+                )
 
         return EmailResult(
-            sent_via_smtp=False,
+            sent_via_smtp=sent_via_smtp,
             owner_saved=owner_ok,
             user_saved=user_ok,
-            smtp_queued=smtp_queued,
+            smtp_queued=False,
             delivery_to=delivery_to,
         )
 

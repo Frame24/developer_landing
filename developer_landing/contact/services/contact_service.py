@@ -94,33 +94,43 @@ class ContactService:
         comment: str,
     ) -> None:
         close_old_connections()
+        request_type = None
+        ai_reply = None
+        ai_available = False
         try:
-            ai_result = self.ai_service.analyze(name=name, comment=comment)
-            if ai_result.available:
-                self.metrics_service.increment("ai_success")
-            else:
+            try:
+                ai_result = self.ai_service.analyze(name=name, comment=comment)
+                request_type = ai_result.request_type
+                ai_reply = ai_result.reply
+                ai_available = ai_result.available
+                if ai_result.available:
+                    self.metrics_service.increment("ai_success")
+                else:
+                    self.metrics_service.increment("ai_fallback")
+                self.repository.update_ai_fields(
+                    contact_id,
+                    request_type=ai_result.request_type or "",
+                    ai_reply=ai_result.reply or "",
+                    ai_available=ai_result.available,
+                )
+            except Exception:
+                logger.exception(
+                    "Background AI failed for contact #%s; sending email anyway",
+                    contact_id,
+                )
                 self.metrics_service.increment("ai_fallback")
-
-            self.repository.update_ai_fields(
-                contact_id,
-                request_type=ai_result.request_type or "",
-                ai_reply=ai_result.reply or "",
-                ai_available=ai_result.available,
-            )
 
             email_result = self.email_service.send_contact_notifications(
                 name=name,
                 phone=phone,
                 email=email,
                 comment=comment,
-                request_type=ai_result.request_type,
-                ai_reply=ai_result.reply,
-                ai_available=ai_result.available,
+                request_type=request_type,
+                ai_reply=ai_reply,
+                ai_available=ai_available,
             )
             if email_result.sent_via_smtp:
                 self.metrics_service.increment("emails_sent")
-            elif email_result.smtp_queued:
-                self.metrics_service.increment("emails_smtp_queued")
             else:
                 self.metrics_service.increment("emails_file_fallback")
 
@@ -131,9 +141,11 @@ class ContactService:
                     contact_id,
                 )
             logger.info(
-                "Background AI+email done for contact #%s (type=%s)",
+                "Background AI+email done for contact #%s (type=%s smtp=%s to=%s)",
                 contact_id,
-                ai_result.request_type,
+                request_type,
+                email_result.sent_via_smtp,
+                email_result.delivery_to,
             )
         except Exception:
             logger.exception("Background AI+email failed for contact #%s", contact_id)
