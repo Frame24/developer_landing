@@ -1,0 +1,112 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HKS — Backend Developer</title>
+    <meta
+      name="description"
+      content="Презентация backend-разработчика: Django, API, AI-интеграции."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}" />
+  </head>
+  <body>
+    <div class="atmosphere" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <a class="brand" href="#top">HKS</a>
+      <nav class="nav">
+        <a href="#skills">Навыки</a>
+        <a href="#stack">Стек</a>
+        <a href="#contact">Связаться</a>
+        <a href="/api/docs/" target="_blank" rel="noopener">API Docs</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <p class="hero-brand">HKS</p>
+        <h1 class="hero-title">Backend developer</h1>
+        <p class="hero-lead">
+          API, интеграции и аккуратная работа с legacy. AI в пайплайне, а не в презентации.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#contact">Написать</a>
+          <a class="btn btn-ghost" href="/api/docs/">Swagger</a>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="grid-glow"></div>
+          <pre class="code-panel"><code>POST /api/contact
+→ validate
+→ rate limit
+→ AI classify + reply
+→ email / file fallback
+→ 201</code></pre>
+        </div>
+      </section>
+
+      <section id="skills" class="section">
+        <h2>Чем занимаюсь</h2>
+        <p class="section-lead">Фокус на backend: от эндпоинта до надёжной доставки ответа.</p>
+        <ul class="skill-list">
+          <li>Проектирование REST API и контрактов с frontend</li>
+          <li>Валидация, обработка ошибок, логирование</li>
+          <li>Интеграции с внешними сервисами и AI API</li>
+          <li>Работа с legacy-кодом и разбор багов</li>
+        </ul>
+      </section>
+
+      <section id="stack" class="section section-alt">
+        <h2>Стек</h2>
+        <p class="section-lead">Инструменты этого проекта и повседневной разработки.</p>
+        <ul class="stack-list">
+          <li>Python / Django / DRF</li>
+          <li>OpenAI API</li>
+          <li>Git, SQLite / файловое хранилище</li>
+          <li>Swagger / OpenAPI</li>
+          <li>Cursor как AI IDE</li>
+        </ul>
+      </section>
+
+      <section id="contact" class="section">
+        <h2>Обратная связь</h2>
+        <p class="section-lead">Форма бьёт в <code>POST /api/contact</code>. AI классифицирует запрос и готовит ответ.</p>
+
+        <form id="contact-form" class="contact-form" novalidate>
+          <div class="field">
+            <label for="name">Имя</label>
+            <input id="name" name="name" type="text" autocomplete="name" required maxlength="120" />
+          </div>
+          <div class="field">
+            <label for="phone">Телефон</label>
+            <input id="phone" name="phone" type="tel" autocomplete="tel" required maxlength="32" />
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="field">
+            <label for="comment">Комментарий</label>
+            <textarea id="comment" name="comment" rows="5" required minlength="5" maxlength="5000"></textarea>
+          </div>
+          <button class="btn btn-primary" type="submit" id="submit-btn">Отправить</button>
+          <p id="form-status" class="form-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Developer Landing API</span>
+      <a href="/api/health">/api/health</a>
+    </footer>
+
+    <script src="{% static 'js/landing.js' %}"></script>
+  </body>
+</html>
