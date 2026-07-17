@@ -2,8 +2,8 @@
 # ------------------------------------------------------------------------------
 # DJANGO_READ_DOT_ENV_FILE=True
 DJANGO_SETTINGS_MODULE=config.settings.production
-DJANGO_SECRET_KEY=pULhOHVBeNTbBtT75Ei67QGWaivOfgv8iJDsmCoEkWx1pLhy4eCMFUut60XGUcq3
-DJANGO_ADMIN_URL=82bqrAkMuXVNVK0lyqKEpGvdgn6o19f2/
+DJANGO_SECRET_KEY=change-me-generate-a-long-random-secret
+DJANGO_ADMIN_URL=admin/
 DJANGO_ALLOWED_HOSTS=.localhost
 
 # Security
@@ -28,4 +28,3 @@ WEB_CONCURRENCY=4
 # Redis
 # ------------------------------------------------------------------------------
 REDIS_URL=redis://redis:6379/0
-
