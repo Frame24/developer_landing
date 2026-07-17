@@ -34,7 +34,10 @@ class ContactCreateView(APIView):
     @extend_schema(
         request=ContactSerializer,
         responses={201: dict, 400: dict, 429: dict, 500: dict},
-        description="Принять обращение с формы, прогнать через AI и отправить email.",
+        description=(
+            "Принять обращение с формы. AI и email запускаются в фоне "
+            "сразу после сохранения заявки."
+        ),
     )
     def post(self, request):
         serializer = ContactSerializer(data=request.data)

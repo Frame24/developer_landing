@@ -106,25 +106,51 @@
           <p id="form-status" class="form-status" role="status" aria-live="polite"></p>
         </form>
 
-        <aside class="api-demo" aria-label="Демо API">
-          <h3>Демо API</h3>
-          <p class="section-lead">
-            В тестовом режиме Resend оба письма (уведомление и ответ) уходят на
-            <code>hks9@yandex.ru</code>, какой бы email ни указали в форме.
-          </p>
-          <div class="api-demo-links">
-            <a href="/api/health" target="_blank" rel="noopener">GET /api/health</a>
-            <a href="/api/metrics" target="_blank" rel="noopener">GET /api/metrics</a>
-            <a href="/api/mail" target="_blank" rel="noopener">GET /api/mail</a>
-            <a href="/api/docs/" target="_blank" rel="noopener">Swagger</a>
-            <button type="button" class="btn btn-ghost" id="refresh-demo">Обновить</button>
+        <aside class="mail-box" aria-label="Панель тестового задания">
+          <div class="mail-box-head">
+            <div>
+              <h3>Панель тестового задания</h3>
+              <p class="section-lead">
+                Mail.ru и Gmail блокируют SMTP с VPN и с датацентров Render.
+                Resend без своего домена отправляет письма только на адрес аккаунта
+                (<code>hks9@yandex.ru</code>), поэтому оба письма уходят туда,
+                какой бы email ни указали в форме.
+              </p>
+            </div>
+            <button type="button" class="btn btn-ghost" id="refresh-mail">Обновить</button>
           </div>
-          <pre id="demo-health" class="api-demo-panel" aria-live="polite">health: …</pre>
-          <pre id="demo-metrics" class="api-demo-panel" aria-live="polite">metrics: …</pre>
-          <pre id="demo-mail" class="api-demo-panel" aria-live="polite">mail: …</pre>
+
+          <div class="mail-layout">
+            <div class="mail-list" id="mail-list" role="list" aria-live="polite">
+              <p class="mail-empty">Загрузка писем…</p>
+            </div>
+            <article class="mail-read" id="mail-read" aria-live="polite">
+              <p class="mail-empty">Выберите письмо слева</p>
+            </article>
+          </div>
         </aside>
       </section>
     </main>
+
+    <aside class="metrics-corner" aria-label="API metrics" id="metrics-corner">
+      <a class="metrics-corner-title" href="/api/metrics" target="_blank" rel="noopener">
+        /api/metrics
+      </a>
+      <dl class="metrics-corner-grid">
+        <div>
+          <dt>contacts</dt>
+          <dd id="metric-contacts">—</dd>
+        </div>
+        <div>
+          <dt>ai ok</dt>
+          <dd id="metric-ai">—</dd>
+        </div>
+        <div>
+          <dt>mail</dt>
+          <dd id="metric-mail">—</dd>
+        </div>
+      </dl>
+    </aside>
 
     <footer class="site-footer">
       <span>Developer Landing API</span>

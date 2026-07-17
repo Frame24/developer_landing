@@ -27,6 +27,20 @@ class ContactRepository:
             client_ip=client_ip,
         )
 
+    def update_ai_fields(
+        self,
+        contact_id: int,
+        *,
+        request_type: str,
+        ai_reply: str,
+        ai_available: bool,
+    ) -> None:
+        ContactRequest.objects.filter(pk=contact_id).update(
+            request_type=request_type,
+            ai_reply=ai_reply,
+            ai_available=ai_available,
+        )
+
     def count(self) -> int:
         return ContactRequest.objects.count()
 

@@ -281,50 +281,204 @@ body {
   color: var(--accent);
 }
 
-.api-demo {
+.mail-box {
   margin-top: 2.5rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--line);
 }
 
-.api-demo h3 {
+.mail-box-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.mail-box h3 {
   margin: 0 0 0.5rem;
   font-family: var(--font-display);
   font-size: 1.45rem;
   font-weight: 400;
 }
 
-.api-demo-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-  margin: 1rem 0 1.1rem;
+.mail-box .section-lead {
+  margin-bottom: 0;
 }
 
-.api-demo-links a {
-  color: #c4a35a;
-  text-decoration: none;
-  border-bottom: 1px solid rgba(196, 163, 90, 0.35);
-  padding-bottom: 0.1rem;
+.mail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+  gap: 0;
+  border: 1px solid var(--line);
+  background: rgba(8, 14, 12, 0.45);
+  height: min(440px, 70vh);
+  overflow: hidden;
+}
+
+.mail-list {
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+}
+
+.mail-item {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  max-width: 100%;
+  padding: 0.85rem 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  overflow: hidden;
+}
+
+.mail-item:hover,
+.mail-item.is-active {
+  background: rgba(61, 155, 106, 0.12);
+}
+
+.mail-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.mail-kind {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+
+.mail-time {
+  font-size: 0.75rem;
+  color: #7f9186;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mail-subject,
+.mail-from {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mail-subject {
+  font-weight: 500;
+  color: #e8f0ea;
   font-size: 0.92rem;
 }
 
-.api-demo-links a:hover {
-  border-bottom-color: #c4a35a;
+.mail-from {
+  font-size: 0.8rem;
+  color: #9aaba0;
 }
 
-.api-demo-panel {
-  margin: 0 0 0.75rem;
-  padding: 0.85rem 0.95rem;
-  max-height: 220px;
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: 0.35rem;
-  background: rgba(8, 14, 12, 0.55);
-  color: #b7c8be;
-  font-size: 0.78rem;
-  line-height: 1.45;
+.mail-read {
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 1.1rem 1.2rem;
+}
+
+.mail-read-meta {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.88rem;
+  color: #9aaba0;
+  overflow-wrap: anywhere;
+}
+
+.mail-read-meta strong {
+  color: #d5e4da;
+  font-weight: 500;
+}
+
+.mail-read-body {
+  margin: 0;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #c9d7ce;
+}
+
+.mail-empty {
+  margin: 1.25rem;
+  color: #8fa094;
+  font-size: 0.92rem;
+}
+
+.metrics-corner {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 20;
+  min-width: 11.5rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  background: rgba(15, 20, 18, 0.92);
+  backdrop-filter: blur(8px);
+}
+
+.metrics-corner-title {
+  display: block;
+  margin-bottom: 0.55rem;
+  color: var(--accent-2);
+  text-decoration: none;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.metrics-corner-title:hover {
+  color: #e0c57a;
+}
+
+.metrics-corner-grid {
+  margin: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.metrics-corner-grid > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.metrics-corner-grid dt {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #8fa094;
+}
+
+.metrics-corner-grid dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+  color: var(--ink);
 }
 
 .site-footer {
@@ -369,5 +523,23 @@ body {
 
   .hero-brand {
     font-size: clamp(2.6rem, 18vw, 4rem);
+  }
+
+  .mail-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 38%) minmax(0, 1fr);
+    height: min(560px, 75vh);
+  }
+
+  .mail-list {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .metrics-corner {
+    right: 0.65rem;
+    bottom: 0.65rem;
+    min-width: 9.5rem;
+    padding: 0.6rem 0.7rem;
   }
 }
