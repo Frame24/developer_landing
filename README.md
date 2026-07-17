@@ -8,6 +8,8 @@ Backend API и лендинг-презентация разработчика д
 
 Каркас сгенерирован через [cookiecutter-django](https://github.com/cookiecutter/cookiecutter-django), затем адаптирован под ТЗ: SQLite, contact API, AI (OpenRouter / OpenAI-compatible), лендинг, Render.
 
+**Публичный URL:** https://developer-landing-adae.onrender.com/
+
 ## 1. Как запустить
 
 ### Требования
@@ -15,22 +17,58 @@ Backend API и лендинг-презентация разработчика д
 - Python 3.12+
 - [uv](https://github.com/astral-sh/uv) (рекомендуется) или pip
 - API-ключ AI-провайдера (опционально; без ключа работает fallback)
+- Git
 
-### Установка (uv)
+### Локальный запуск (пошагово)
+
+1. Клонировать репозиторий и перейти в каталог проекта:
 
 ```bash
+git clone https://github.com/Frame24/developer_landing.git
 cd developer_landing
-uv sync
+```
+
+2. Создать `.env` из примера:
+
+```bash
 cp .env.example .env
-# заполните OPENAI_API_KEY и при необходимости OPENAI_BASE_URL
+```
+
+На Windows (PowerShell):
+
+```powershell
+Copy-Item .env.example .env
+```
+
+3. В `.env` для локали оставьте как минимум:
+
+```env
+DJANGO_READ_DOT_ENV_FILE=True
+DJANGO_DEBUG=True
+DJANGO_SETTINGS_MODULE=config.settings.local
+DJANGO_SECRET_KEY=local-dev-secret-change-me-please-32chars
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+CONTACT_OWNER_EMAIL=owner@example.com
+```
+
+Опционально:
+
+- AI: `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` (без ключа форма всё равно работает)
+- Email: блок Resend из `.env.example` (без него письма пишутся только в `storage/mail/`)
+
+4. Установить зависимости и поднять сервер (один из двух способов).
+
+#### Вариант A: uv
+
+```bash
+uv sync
 uv run python manage.py migrate
 uv run python manage.py runserver
 ```
 
-### Установка (venv + pip)
+#### Вариант B: venv + pip
 
 ```bash
-cd developer_landing
 python -m venv .venv
 
 # Windows
@@ -40,12 +78,11 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
-cp .env.example .env
 python manage.py migrate
 python manage.py runserver
 ```
 
-Откройте:
+5. Открыть в браузере:
 
 | URL | Что |
 |---|---|
@@ -53,6 +90,21 @@ python manage.py runserver
 | http://127.0.0.1:8000/api/docs/ | Swagger UI |
 | http://127.0.0.1:8000/api/health | Healthcheck |
 | http://127.0.0.1:8000/api/metrics | Статистика |
+| http://127.0.0.1:8000/api/mail | Демо-лента сохранённых писем |
+
+6. Быстрая проверка API без браузера:
+
+```bash
+curl -s http://127.0.0.1:8000/api/health
+
+curl -s -X POST http://127.0.0.1:8000/api/contact \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"Ivan Petrov\",\"phone\":\"+7 999 123-45-67\",\"email\":\"ivan@example.com\",\"comment\":\"Хочу обсудить backend интеграцию для проекта\"}"
+```
+
+После отправки формы смотрите копии писем в `storage/mail/` (и в панели на лендинге).
+
+Остановка сервера: `Ctrl+C` в терминале.
 
 ### Переменные окружения
 
@@ -63,15 +115,16 @@ python manage.py runserver
 | `DJANGO_SECRET_KEY` | Секрет Django |
 | `DJANGO_SETTINGS_MODULE` | `config.settings.local` / `config.settings.render` |
 | `OPENAI_API_KEY` | Ключ провайдера (можно пустым: AI fallback) |
-| `OPENAI_BASE_URL` | Базовый URL API. Для OpenRouter: `https://openrouter.ai/api/v1`. Пусто = официальный OpenAI |
-| `OPENAI_MODEL` | Модель. Для OpenRouter free: `openrouter/free`. Для OpenAI: `gpt-4o-mini` |
+| `OPENAI_BASE_URL` | Базовый URL API. Для OpenRouter: `https://openrouter.ai/api/v1` |
+| `OPENAI_MODEL` | Модель. Для OpenRouter free: `openrouter/free` |
 | `OPENAI_TIMEOUT_SECONDS` | Таймаут AI (по умолчанию 20) |
-| `EMAIL_HOST` / `EMAIL_*` | SMTP; если `EMAIL_HOST` пуст, письма пишутся в `storage/mail/` |
+| `EMAIL_HOST` / `EMAIL_*` | Если `EMAIL_HOST` пуст, письма только в `storage/mail/` |
 | `CONTACT_OWNER_EMAIL` | Получатель уведомления владельцу |
+| `EMAIL_DEMO_FORCE_TO` | Демо: оба письма на один адрес (см. раздел про почту) |
 | `RATE_LIMIT_MAX` | Лимит запросов с IP (по умолчанию 5) |
 | `RATE_LIMIT_WINDOW_SECONDS` | Окно лимита (по умолчанию 900) |
 
-Пример для OpenRouter в `.env`:
+Пример для OpenRouter:
 
 ```env
 OPENAI_API_KEY=sk-or-v1-...
@@ -79,7 +132,18 @@ OPENAI_BASE_URL=https://openrouter.ai/api/v1
 OPENAI_MODEL=openrouter/free
 ```
 
-Ключ храните только в `.env` (файл в `.gitignore`), не в `.env.example` и не в git.
+Пример для Resend (рекомендуется для локали с VPN и для Render):
+
+```env
+EMAIL_HOST=smtp.resend.com
+EMAIL_HOST_USER=resend
+EMAIL_HOST_PASSWORD=re_...
+DJANGO_DEFAULT_FROM_EMAIL=Developer Landing <onboarding@resend.dev>
+CONTACT_OWNER_EMAIL=you@example.com
+EMAIL_DEMO_FORCE_TO=you@example.com
+```
+
+Ключ храните только в `.env` (файл в `.gitignore`), не в git.
 
 ## 2. Стек технологий
 
@@ -95,19 +159,22 @@ OPENAI_MODEL=openrouter/free
 **AI**
 
 - OpenAI-compatible SDK (`openai`)
-- Провайдер: OpenRouter (бесплатные модели) или любой OpenAI-compatible endpoint через `OPENAI_BASE_URL`
-- Классификация типа обращения
-- Генерация ответа пользователю
+- Провайдер: OpenRouter (бесплатные модели) или любой OpenAI-compatible endpoint
+- Классификация типа обращения + генерация ответа пользователю
+
+**Email**
+
+- Resend HTTPS API (если `EMAIL_HOST` содержит `resend`) или Django SMTP
+- Файловый fallback `storage/mail/`
 
 **Frontend**
 
 - Django templates + vanilla JS/CSS
-- Лендинг с формой → `POST /api/contact`
+- Лендинг с формой → `POST /api/contact`, демо-ящик писем, виджет `/api/metrics`
 
-**Инструменты разработки**
+**Инструменты**
 
-- Cursor (генерация и доработка кода)
-- Git / GitHub
+- Cursor (генерация и доработка), Git / GitHub, uv
 
 ## 3. Архитектура
 
@@ -142,9 +209,10 @@ developer_landing/
 
 - **Django + DRF**: близко к вакансии (backend, API), быстрый OpenAPI через spectacular.
 - **cookiecutter-django**: зрелый каркас (settings split, whitenoise, CORS, DRF).
-- **SQLite + файлы**: достаточно для ТЗ, без отдельной БД/Redis на free-tier.
-- **OpenAI-compatible client**: один код для OpenAI, OpenRouter и других провайдеров с тем же протоколом.
-- **Services**: бизнес-логика не в views; проще читать и расширять.
+- **SQLite + файлы**: достаточно для ТЗ, без Redis на free-tier.
+- **OpenAI-compatible client**: один код для OpenAI / OpenRouter.
+- **Services**: бизнес-логика не в views.
+- **Синхронный приём заявки, асинхронный AI+email**: `201` сразу после валидации и записи в БД; классификация, ответ и письма догоняют в фоне (удобнее UX, меньше риск таймаута gunicorn на Render).
 
 ## 4. Реализация API
 
@@ -153,6 +221,7 @@ developer_landing/
 | `POST` | `/api/contact` | Форма обратной связи |
 | `GET` | `/api/health` | Статус сервиса |
 | `GET` | `/api/metrics` | Статистика обращений |
+| `GET` | `/api/mail` | Демо: сохранённые копии писем |
 | `GET` | `/api/docs/` | Swagger UI |
 | `GET` | `/api/schema/` | OpenAPI schema |
 
@@ -169,23 +238,26 @@ developer_landing/
 }
 ```
 
-Успех `201` (AI доступен):
+Успех `201` (заявка принята; AI и email ещё могут идти в фоне):
 
 ```json
 {
   "success": true,
   "data": {
     "id": 1,
-    "ai_available": true,
-    "request_type": "lead",
-    "ai_reply": "Краткий ответ, сгенерированный моделью...",
+    "ai_available": false,
+    "request_type": null,
+    "ai_reply": null,
     "email_via_smtp": false,
+    "email_queued": true,
+    "email_owner_to": "owner@example.com",
+    "email_user_to": "ivan@example.com",
     "rate_limit_remaining": 4
   }
 }
 ```
 
-Если AI недоступен, те же поля приходят с `ai_available: false`, `request_type` / `ai_reply` = `null`; заявка всё равно принимается.
+Через несколько секунд результат AI и письма появляются в БД, `storage/mail/`, `GET /api/mail` и на лендинге. Если AI недоступен, письма уходят с шаблонным текстом, метрика `ai_fallback` растёт.
 
 Статусы:
 
@@ -198,19 +270,38 @@ developer_landing/
 
 Примеры: [examples/curl.md](examples/curl.md), [postman/Developer_Landing_API.postman_collection.json](postman/Developer_Landing_API.postman_collection.json).
 
-Где посмотреть ответ AI локально без SMTP:
+Где посмотреть письма локально:
 
 - `storage/mail/user_*.txt` — копия пользователю (текст AI-ответа)
-- `storage/mail/owner_*.txt` — уведомление владельцу (тип, `AI available`)
+- `storage/mail/owner_*.txt` — уведомление владельцу
+- на лендинге: панель "Панель тестового задания" / `GET /api/mail`
+
+### Email: owner + user
+
+В нормальном режиме:
+
+- письмо владельцу → `CONTACT_OWNER_EMAIL`
+- копия пользователю → email из формы
+
+Оба текста всегда пишутся в `storage/mail/` (даже если SMTP/API недоступен).
+
+### Ограничения почты (важно для демо)
+
+1. **Gmail / Mail.ru SMTP** часто блокируют отправку с VPN и с IP датацентров (Render). Локально без VPN иногда работает, на Render обычно нет.
+2. Поэтому для демо выбран **Resend**. Если `EMAIL_HOST` содержит `resend`, код шлёт через **HTTPS** `https://api.resend.com/emails` (порт 587 SMTP с VPN часто таймаутится).
+3. **Resend без своего домена** может доставлять только на email аккаунта Resend. Для проверки ставьте:
+   - `EMAIL_DEMO_FORCE_TO=<email аккаунта Resend>`
+   - тогда **оба** письма (owner + user) уходят на этот адрес; в теле письма видно исходный email из формы.
+4. С верифицированным доменом в Resend уберите `EMAIL_DEMO_FORCE_TO`: owner и user снова разъедутся по разным адресам.
 
 ## 5. AI-интеграция
 
 На каждый `POST /api/contact`:
 
-1. **Классификация** типа: `lead | question | bug | partnership | other`
-2. **Генерация ответа** пользователю (попадает в письмо-копию и в JSON `ai_reply`)
+1. **Классификация** типа: `lead | question | bug | partnership | other` (сначала правила по ключевым словам, затем LLM при `other`)
+2. **Генерация ответа** пользователю (письмо-копия; в JSON `ai_reply` появится после фоновой обработки, если смотреть повторно через admin/БД)
 
-Клиент: `openai` SDK с опциональным `base_url` (`OPENAI_BASE_URL`), поэтому подходит OpenAI, OpenRouter и аналоги.
+Клиент: `openai` SDK с опциональным `base_url` (`OPENAI_BASE_URL`).
 
 ### Fallback
 
@@ -228,19 +319,18 @@ developer_landing/
 - `CLASSIFY_PROMPT`: JSON с `request_type` и `confidence`
 - `REPLY_PROMPT`: короткий вежливый ответ на русском без выдуманных обещаний
 
-Классификация сначала пробует `response_format=json_object`; если модель не поддерживает, повтор без него и парсинг JSON из текста.
-
 ## 6. Что сделано с помощью AI
 
 | Часть | Как | Что правил вручную |
 |---|---|---|
-| Каркас cookiecutter | CLI + зафиксированные ответы | Переход на SQLite, убрали psycopg/redis |
+| Каркас cookiecutter | CLI | Переход на SQLite, убрали лишнее |
 | Contact services/views | Cursor | Контракты ответов, статусы, fallback |
-| OpenRouter / `base_url` | Cursor | Env, устойчивость classify без `json_object` |
-| Лендинг CSS/JS | Cursor | Визуал, UX состояний формы |
-| README / Postman | Cursor | Проверка фактов по коду |
+| OpenRouter / `base_url` | Cursor | Env, устойчивость classify |
+| Resend HTTPS + demo force-to | Cursor | Обход VPN/SMTP, разделение owner/user |
+| Лендинг CSS/JS + почтовый ящик | Cursor | UX формы, демо-панель |
+| README / Postman | Cursor | Сверка с кодом и ТЗ |
 
-Типовые промпты в Cursor: "слой Controllers → Services → Repositories", "graceful AI fallback", "OpenRouter через openai SDK", "лендинг без generic purple/cream".
+Типовые промпты в Cursor: "слой Controllers → Services → Repositories", "graceful AI fallback", "OpenRouter через openai SDK".
 
 ## 7. Хранение данных
 
@@ -250,44 +340,47 @@ developer_landing/
 | Логи HTTP | `storage/logs/requests.log` (middleware) |
 | Rate limit | `storage/rate_limit/rate_limit.json` |
 | Метрики | `storage/metrics.json` + агрегаты из БД |
-| Письма без SMTP | `storage/mail/*.txt` |
+| Копии писем | `storage/mail/*.txt` (всегда) + Resend/SMTP при настройке |
 
 Rate limit: по умолчанию **5 запросов с IP за 15 минут** (`RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_SECONDS`).
 
-## Деплой на Render (бесплатно)
+Глобальный error handler DRF: `developer_landing/contact/exception_handler.py`  
+CORS: `django-cors-headers`  
+OpenAPI: `/api/docs/`
 
-GitHub Pages не хостит Django. Используйте Render Free Web Service.
+## Деплой на Render
 
-1. Запушьте репозиторий на GitHub.
-2. На [render.com](https://render.com): New → Web Service → подключите репозиторий.
-3. Build command: `./build.sh`
-4. Start command: `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --timeout 120 --workers 2`
-5. Environment:
+1. Репозиторий на GitHub.
+2. [render.com](https://render.com): New → Web Service.
+3. Build: `./build.sh`
+4. Start: `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --timeout 120 --workers 2`
+5. Environment (минимум):
 
 ```
 DJANGO_SETTINGS_MODULE=config.settings.render
 DJANGO_SECRET_KEY=<длинный секрет>
 DJANGO_ALLOWED_HOSTS=.onrender.com
 PYTHON_VERSION=3.12.8
-OPENAI_API_KEY=<ваш ключ>
+OPENAI_API_KEY=<ключ>
 OPENAI_BASE_URL=https://openrouter.ai/api/v1
 OPENAI_MODEL=openrouter/free
-CONTACT_OWNER_EMAIL=<ваш email>
+EMAIL_HOST=smtp.resend.com
+EMAIL_HOST_USER=resend
+EMAIL_HOST_PASSWORD=re_...
+DJANGO_DEFAULT_FROM_EMAIL=Developer Landing <onboarding@resend.dev>
+CONTACT_OWNER_EMAIL=<email аккаунта Resend>
+EMAIL_DEMO_FORCE_TO=<email аккаунта Resend>
 ```
 
-Можно использовать `render.yaml` как Blueprint (добавьте `OPENAI_BASE_URL` / `OPENAI_MODEL` в env вручную, если Blueprint их ещё не содержит).
+После деплоя:
 
-После деплоя проверьте:
+- https://developer-landing-adae.onrender.com/
+- https://developer-landing-adae.onrender.com/api/health
+- https://developer-landing-adae.onrender.com/api/docs/
 
-- `https://<app>.onrender.com/`
-- `https://<app>.onrender.com/api/health`
-- `https://<app>.onrender.com/api/docs/`
+Free tier засыпает после простоя: первый запрос 30–60 секунд. Диск эфемерный: `storage/mail` на Render сбрасывается при редеплое.
 
-Free tier засыпает после простоя: первый запрос может идти 30–60 секунд.
-
-**Публичный URL:** https://developer-landing-adae.onrender.com/
-
-Если деплой недоступен, достаточно локального запуска по инструкции выше + Postman/curl.
+Если деплой недоступен, достаточно локального запуска + Postman/curl.
 
 ## Лицензия
 

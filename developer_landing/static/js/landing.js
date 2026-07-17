@@ -191,7 +191,6 @@
           setStatus(`Спасибо! Обращение #${id} принято.`, "is-success");
           form.reset();
           refreshPanels();
-          // AI + mail finish in background; refresh again shortly.
           window.setTimeout(refreshPanels, 2500);
           window.setTimeout(refreshPanels, 6000);
           return;

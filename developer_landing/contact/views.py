@@ -35,8 +35,9 @@ class ContactCreateView(APIView):
         request=ContactSerializer,
         responses={201: dict, 400: dict, 429: dict, 500: dict},
         description=(
-            "Принять обращение с формы. AI и email запускаются в фоне "
-            "сразу после сохранения заявки."
+            "Принять обращение: валидация → rate limit → сохранение → 201. "
+            "AI и email дорабатываются в фоне; результат смотрите в БД, "
+            "/api/mail и storage/mail/."
         ),
     )
     def post(self, request):
@@ -90,7 +91,8 @@ class ContactCreateView(APIView):
                     "ai_reply": result.ai_reply,
                     "email_via_smtp": result.email_via_smtp,
                     "email_queued": result.email_queued,
-                    "email_delivery_to": result.email_delivery_to,
+                    "email_owner_to": result.email_owner_to,
+                    "email_user_to": result.email_user_to,
                     "rate_limit_remaining": rate.remaining,
                 },
             },

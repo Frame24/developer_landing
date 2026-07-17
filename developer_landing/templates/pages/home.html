@@ -110,12 +110,13 @@
           <div class="mail-box-head">
             <div>
               <h3>Панель тестового задания</h3>
-              <p class="section-lead">
-                Mail.ru и Gmail блокируют SMTP с VPN и с датацентров Render.
-                Resend без своего домена отправляет письма только на адрес аккаунта
-                (<code>hks9@yandex.ru</code>), поэтому оба письма уходят туда,
-                какой бы email ни указали в форме.
-              </p>
+          <p class="section-lead">
+            Mail.ru и Gmail блокируют SMTP с VPN и с датацентров Render.
+            Поэтому демо идёт через Resend HTTPS API. Без своего домена Resend
+            шлёт только на адрес аккаунта (<code>hks9@yandex.ru</code>), поэтому
+            при <code>EMAIL_DEMO_FORCE_TO</code> оба письма (владельцу и ответ)
+            уходят туда, какой бы email ни указали в форме.
+          </p>
             </div>
             <button type="button" class="btn btn-ghost" id="refresh-mail">Обновить</button>
           </div>

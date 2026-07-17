@@ -30,6 +30,9 @@ curl -s -X POST http://127.0.0.1:8000/api/contact \
   -d "{\"name\":\"A\",\"phone\":\"12\",\"email\":\"bad\",\"comment\":\"hi\"}"
 ```
 
-## Swagger
+## Mail (демо)
 
-Откройте в браузере: http://127.0.0.1:8000/api/docs/
+```bash
+curl -s "http://127.0.0.1:8000/api/mail?limit=5"
+```
+

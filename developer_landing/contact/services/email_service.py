@@ -19,8 +19,8 @@ class EmailResult:
     sent_via_smtp: bool
     owner_saved: bool
     user_saved: bool
-    smtp_queued: bool = False
-    delivery_to: str | None = None
+    owner_to: str | None = None
+    user_to: str | None = None
 
 
 class EmailService:
@@ -35,7 +35,8 @@ class EmailService:
         ai_reply: str | None,
         ai_available: bool,
     ) -> EmailResult:
-        delivery_to = self.effective_delivery_address(email)
+        owner_to = self.owner_delivery_address()
+        user_to = self.user_delivery_address(email)
         owner_body = self._owner_body(
             name=name,
             phone=phone,
@@ -43,7 +44,8 @@ class EmailService:
             comment=comment,
             request_type=request_type,
             ai_available=ai_available,
-            delivery_to=delivery_to,
+            owner_to=owner_to,
+            user_to=user_to,
         )
         user_body = self._user_body(
             name=name,
@@ -51,7 +53,7 @@ class EmailService:
             ai_reply=ai_reply,
             ai_available=ai_available,
             original_email=email,
-            delivery_to=delivery_to,
+            user_to=user_to,
         )
 
         owner_ok = self._save_to_file(
@@ -60,7 +62,7 @@ class EmailService:
             meta={
                 "kind": "owner",
                 "original_email": email,
-                "delivery_to": delivery_to,
+                "delivery_to": owner_to,
                 "subject": f"[Contact] Новое обращение от {name}",
             },
         )
@@ -70,57 +72,71 @@ class EmailService:
             meta={
                 "kind": "user_reply",
                 "original_email": email,
-                "delivery_to": delivery_to,
+                "delivery_to": user_to,
                 "subject": "Мы получили ваше обращение",
             },
         )
 
-        # Delivery runs inline. Caller already schedules this in a background thread.
         sent_via_smtp = False
         if self.is_configured():
             try:
                 self._send_pair(
                     owner_subject=f"[Contact] Новое обращение от {name}",
                     owner_body=owner_body,
+                    owner_to=owner_to,
                     user_subject="Мы получили ваше обращение",
                     user_body=user_body,
-                    delivery_to=delivery_to,
+                    user_to=user_to,
                 )
                 sent_via_smtp = True
                 logger.info(
-                    "Email sent to %s (original form email=%s via=%s)",
-                    delivery_to,
-                    email,
+                    "Email sent owner=%s user=%s via=%s",
+                    owner_to,
+                    user_to,
                     "resend_api" if self._uses_resend() else "smtp",
                 )
             except Exception:
                 logger.exception(
-                    "Email send failed (to=%s original=%s)",
-                    delivery_to,
-                    email,
+                    "Email send failed (owner=%s user=%s)",
+                    owner_to,
+                    user_to,
                 )
 
         return EmailResult(
             sent_via_smtp=sent_via_smtp,
             owner_saved=owner_ok,
             user_saved=user_ok,
-            smtp_queued=False,
-            delivery_to=delivery_to,
+            owner_to=owner_to,
+            user_to=user_to,
         )
 
     @staticmethod
-    def effective_delivery_address(original_email: str) -> str:
+    def owner_delivery_address() -> str:
         forced = (settings.EMAIL_DEMO_FORCE_TO or "").strip()
         if forced:
             return forced
-        return settings.CONTACT_OWNER_EMAIL or original_email
+        return (settings.CONTACT_OWNER_EMAIL or "").strip()
+
+    @staticmethod
+    def user_delivery_address(original_email: str) -> str:
+        forced = (settings.EMAIL_DEMO_FORCE_TO or "").strip()
+        if forced:
+            return forced
+        return (original_email or "").strip()
+
+    def effective_delivery_address(self, original_email: str) -> str:
+        """Compatibility helper for health/demo: prefer forced, else owner."""
+        forced = (settings.EMAIL_DEMO_FORCE_TO or "").strip()
+        if forced:
+            return forced
+        return self.owner_delivery_address() or original_email
 
     def is_configured(self) -> bool:
         return bool(
             settings.EMAIL_HOST
             and settings.EMAIL_HOST_USER
             and settings.EMAIL_HOST_PASSWORD
-            and (settings.EMAIL_DEMO_FORCE_TO or settings.CONTACT_OWNER_EMAIL)
+            and self.owner_delivery_address()
         )
 
     def _smtp_configured(self) -> bool:
@@ -136,14 +152,15 @@ class EmailService:
         *,
         owner_subject: str,
         owner_body: str,
+        owner_to: str,
         user_subject: str,
         user_body: str,
-        delivery_to: str,
+        user_to: str,
     ) -> None:
-        # Resend SMTP (port 587) often times out behind VPN; HTTPS API is reliable.
+        # Resend SMTP :587 often times out behind VPN; HTTPS API is reliable.
         send = self._send_resend_api if self._uses_resend() else self._send_smtp
-        send(subject=owner_subject, body=owner_body, to=[delivery_to])
-        send(subject=user_subject, body=user_body, to=[delivery_to])
+        send(subject=owner_subject, body=owner_body, to=[owner_to])
+        send(subject=user_subject, body=user_body, to=[user_to])
 
     def _send_resend_api(self, *, subject: str, body: str, to: list[str]) -> None:
         payload = {
@@ -213,14 +230,16 @@ class EmailService:
         comment: str,
         request_type: str | None,
         ai_available: bool,
-        delivery_to: str,
+        owner_to: str,
+        user_to: str,
     ) -> str:
         demo_note = ""
         if settings.EMAIL_DEMO_FORCE_TO:
             demo_note = (
-                f"[DEMO] Доставка принудительно на {delivery_to} "
-                f"(Resend test mode без своего домена).\n"
-                f"Email из формы: {email}\n\n"
+                f"[DEMO] Оба письма принудительно на {owner_to} "
+                f"(Resend без своего домена шлёт только на email аккаунта).\n"
+                f"Email из формы: {email}\n"
+                f"Копия пользователю тоже на: {user_to}\n\n"
             )
         return (
             f"{demo_note}"
@@ -241,7 +260,7 @@ class EmailService:
         ai_reply: str | None,
         ai_available: bool,
         original_email: str,
-        delivery_to: str,
+        user_to: str,
     ) -> str:
         reply = ai_reply if ai_available and ai_reply else (
             "Спасибо за обращение! Мы получили ваше сообщение и ответим в ближайшее время."
@@ -249,8 +268,8 @@ class EmailService:
         demo_note = ""
         if settings.EMAIL_DEMO_FORCE_TO:
             demo_note = (
-                f"[DEMO] Это копия ответа пользователю. "
-                f"В тестовом режиме Resend письмо уходит на {delivery_to}, "
+                f"[DEMO] Копия ответа пользователю. "
+                f"В тестовом режиме Resend письмо уходит на {user_to}, "
                 f"а не на {original_email}.\n\n"
             )
         return (

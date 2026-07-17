@@ -27,7 +27,8 @@ class ContactProcessResult:
     ai_reply: str | None
     email_via_smtp: bool
     email_queued: bool = False
-    email_delivery_to: str | None = None
+    email_owner_to: str | None = None
+    email_user_to: str | None = None
 
 
 class ContactService:
@@ -58,7 +59,8 @@ class ContactService:
         )
         self.metrics_service.increment("total_contacts")
 
-        delivery_to = self.email_service.effective_delivery_address(email)
+        owner_to = self.email_service.owner_delivery_address()
+        user_to = self.email_service.user_delivery_address(email)
         thread = threading.Thread(
             target=self._process_ai_and_email,
             kwargs={
@@ -81,7 +83,8 @@ class ContactService:
             ai_reply=None,
             email_via_smtp=False,
             email_queued=True,
-            email_delivery_to=delivery_to,
+            email_owner_to=owner_to,
+            email_user_to=user_to,
         )
 
     def _process_ai_and_email(
@@ -141,11 +144,12 @@ class ContactService:
                     contact_id,
                 )
             logger.info(
-                "Background AI+email done for contact #%s (type=%s smtp=%s to=%s)",
+                "Background AI+email done for contact #%s (type=%s smtp=%s owner=%s user=%s)",
                 contact_id,
                 request_type,
                 email_result.sent_via_smtp,
-                email_result.delivery_to,
+                email_result.owner_to,
+                email_result.user_to,
             )
         except Exception:
             logger.exception("Background AI+email failed for contact #%s", contact_id)
