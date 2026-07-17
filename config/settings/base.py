@@ -260,6 +260,7 @@ for _path in (STORAGE_DIR, STORAGE_LOGS_DIR, STORAGE_MAIL_DIR, STORAGE_RATE_LIMI
 # CONTACT / AI / RATE LIMIT
 # ------------------------------------------------------------------------------
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+OPENAI_BASE_URL = env("OPENAI_BASE_URL", default="")
 OPENAI_MODEL = env("OPENAI_MODEL", default="gpt-4o-mini")
 OPENAI_TIMEOUT_SECONDS = env.int("OPENAI_TIMEOUT_SECONDS", default=20)
 CONTACT_OWNER_EMAIL = env("CONTACT_OWNER_EMAIL", default="hks@example.com")

@@ -51,10 +51,13 @@ class AIService:
         try:
             from openai import OpenAI
 
-            client = OpenAI(
-                api_key=settings.OPENAI_API_KEY,
-                timeout=settings.OPENAI_TIMEOUT_SECONDS,
-            )
+            client_kwargs = {
+                "api_key": settings.OPENAI_API_KEY,
+                "timeout": settings.OPENAI_TIMEOUT_SECONDS,
+            }
+            if settings.OPENAI_BASE_URL:
+                client_kwargs["base_url"] = settings.OPENAI_BASE_URL
+            client = OpenAI(**client_kwargs)
             request_type = self._classify(client, name=name, comment=comment)
             reply = self._generate_reply(client, name=name, comment=comment, request_type=request_type)
             return AIResult(
@@ -73,24 +76,43 @@ class AIService:
             )
 
     def _classify(self, client, *, name: str, comment: str) -> str:
-        response = client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            temperature=0,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": CLASSIFY_PROMPT},
-                {
-                    "role": "user",
-                    "content": f"Имя: {name}\nКомментарий: {comment}",
-                },
-            ],
-        )
+        messages = [
+            {"role": "system", "content": CLASSIFY_PROMPT},
+            {
+                "role": "user",
+                "content": f"Имя: {name}\nКомментарий: {comment}",
+            },
+        ]
+        kwargs = {
+            "model": settings.OPENAI_MODEL,
+            "temperature": 0,
+            "messages": messages,
+        }
+        # Not all free OpenRouter models support response_format.
+        try:
+            response = client.chat.completions.create(
+                **kwargs,
+                response_format={"type": "json_object"},
+            )
+        except Exception:
+            response = client.chat.completions.create(**kwargs)
         content = response.choices[0].message.content or "{}"
-        payload = json.loads(content)
+        payload = self._parse_json(content)
         request_type = str(payload.get("request_type", "other")).lower().strip()
         if request_type not in self.VALID_TYPES:
             return "other"
         return request_type
+
+    @staticmethod
+    def _parse_json(content: str) -> dict:
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            start = content.find("{")
+            end = content.rfind("}")
+            if start >= 0 and end > start:
+                return json.loads(content[start : end + 1])
+            return {}
 
     def _generate_reply(self, client, *, name: str, comment: str, request_type: str) -> str:
         response = client.chat.completions.create(
