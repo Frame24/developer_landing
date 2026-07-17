@@ -2,9 +2,11 @@
 
 Backend API и лендинг-презентация разработчика для тестового задания InternetLab.
 
+Репозиторий: [github.com/Frame24/developer_landing](https://github.com/Frame24/developer_landing)
+
 Полный цикл: `запрос → валидация → rate limit → AI → email/file fallback → ответ`.
 
-Каркас проекта сгенерирован через [cookiecutter-django](https://github.com/cookiecutter/cookiecutter-django), затем адаптирован под ТЗ (SQLite, contact API, AI, лендинг, Render).
+Каркас сгенерирован через [cookiecutter-django](https://github.com/cookiecutter/cookiecutter-django), затем адаптирован под ТЗ: SQLite, contact API, AI (OpenRouter / OpenAI-compatible), лендинг, Render.
 
 ## 1. Как запустить
 
@@ -12,6 +14,7 @@ Backend API и лендинг-презентация разработчика д
 
 - Python 3.12+
 - [uv](https://github.com/astral-sh/uv) (рекомендуется) или pip
+- API-ключ AI-провайдера (опционально; без ключа работает fallback)
 
 ### Установка (uv)
 
@@ -19,7 +22,7 @@ Backend API и лендинг-презентация разработчика д
 cd developer_landing
 uv sync
 cp .env.example .env
-# при необходимости отредактируйте .env
+# заполните OPENAI_API_KEY и при необходимости OPENAI_BASE_URL
 uv run python manage.py migrate
 uv run python manage.py runserver
 ```
@@ -44,9 +47,12 @@ python manage.py runserver
 
 Откройте:
 
-- Лендинг: http://127.0.0.1:8000/
-- Swagger: http://127.0.0.1:8000/api/docs/
-- Health: http://127.0.0.1:8000/api/health
+| URL | Что |
+|---|---|
+| http://127.0.0.1:8000/ | Лендинг с формой |
+| http://127.0.0.1:8000/api/docs/ | Swagger UI |
+| http://127.0.0.1:8000/api/health | Healthcheck |
+| http://127.0.0.1:8000/api/metrics | Статистика |
 
 ### Переменные окружения
 
@@ -56,12 +62,24 @@ python manage.py runserver
 |---|---|
 | `DJANGO_SECRET_KEY` | Секрет Django |
 | `DJANGO_SETTINGS_MODULE` | `config.settings.local` / `config.settings.render` |
-| `OPENAI_API_KEY` | Ключ OpenAI (можно пустым: AI fallback) |
-| `OPENAI_MODEL` | По умолчанию `gpt-4o-mini` |
+| `OPENAI_API_KEY` | Ключ провайдера (можно пустым: AI fallback) |
+| `OPENAI_BASE_URL` | Базовый URL API. Для OpenRouter: `https://openrouter.ai/api/v1`. Пусто = официальный OpenAI |
+| `OPENAI_MODEL` | Модель. Для OpenRouter free: `openrouter/free`. Для OpenAI: `gpt-4o-mini` |
+| `OPENAI_TIMEOUT_SECONDS` | Таймаут AI (по умолчанию 20) |
 | `EMAIL_HOST` / `EMAIL_*` | SMTP; если `EMAIL_HOST` пуст, письма пишутся в `storage/mail/` |
 | `CONTACT_OWNER_EMAIL` | Получатель уведомления владельцу |
 | `RATE_LIMIT_MAX` | Лимит запросов с IP (по умолчанию 5) |
 | `RATE_LIMIT_WINDOW_SECONDS` | Окно лимита (по умолчанию 900) |
+
+Пример для OpenRouter в `.env`:
+
+```env
+OPENAI_API_KEY=sk-or-v1-...
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_MODEL=openrouter/free
+```
+
+Ключ храните только в `.env` (файл в `.gitignore`), не в `.env.example` и не в git.
 
 ## 2. Стек технологий
 
@@ -76,23 +94,24 @@ python manage.py runserver
 
 **AI**
 
-- OpenAI API (`openai` SDK), модель `gpt-4o-mini`
+- OpenAI-compatible SDK (`openai`)
+- Провайдер: OpenRouter (бесплатные модели) или любой OpenAI-compatible endpoint через `OPENAI_BASE_URL`
 - Классификация типа обращения
 - Генерация ответа пользователю
 
 **Frontend**
 
 - Django templates + vanilla JS/CSS
-- Лендинг с формой, которая бьёт в `POST /api/contact`
+- Лендинг с формой → `POST /api/contact`
 
 **Инструменты разработки**
 
 - Cursor (генерация и доработка кода)
-- Git
+- Git / GitHub
 
 ## 3. Архитектура
 
-Слоистая структура внутри приложения `developer_landing.contact`:
+Слоистая структура внутри `developer_landing.contact`:
 
 ```
 Views (controllers)
@@ -115,6 +134,8 @@ developer_landing/
     templates/pages/      # Лендинг
     static/               # CSS/JS лендинга
   storage/                # logs, mail, rate_limit, metrics
+  examples/               # curl-примеры
+  postman/                # Postman-коллекция
 ```
 
 ### Почему так
@@ -122,7 +143,8 @@ developer_landing/
 - **Django + DRF**: близко к вакансии (backend, API), быстрый OpenAPI через spectacular.
 - **cookiecutter-django**: зрелый каркас (settings split, whitenoise, CORS, DRF).
 - **SQLite + файлы**: достаточно для ТЗ, без отдельной БД/Redis на free-tier.
-- **Services**: бизнес-логика не в views; проще тестировать и читать.
+- **OpenAI-compatible client**: один код для OpenAI, OpenRouter и других провайдеров с тем же протоколом.
+- **Services**: бизнес-логика не в views; проще читать и расширять.
 
 ## 4. Реализация API
 
@@ -147,39 +169,48 @@ developer_landing/
 }
 ```
 
-Успех `201`:
+Успех `201` (AI доступен):
 
 ```json
 {
   "success": true,
   "data": {
     "id": 1,
-    "ai_available": false,
-    "request_type": null,
-    "ai_reply": null,
+    "ai_available": true,
+    "request_type": "lead",
+    "ai_reply": "Краткий ответ, сгенерированный моделью...",
     "email_via_smtp": false,
     "rate_limit_remaining": 4
   }
 }
 ```
 
+Если AI недоступен, те же поля приходят с `ai_available: false`, `request_type` / `ai_reply` = `null`; заявка всё равно принимается.
+
 Статусы:
 
 - `201` успех
 - `400` ошибка валидации
-- `429` rate limit
+- `429` rate limit (`Retry-After`)
 - `500` внутренняя ошибка (не из-за AI)
 
-Валидация: имя, телефон, email, комментарий (санитизация/trim, проверка формата телефона).
+Валидация: имя, телефон, email, комментарий (trim, формат телефона, длина комментария).
 
 Примеры: [examples/curl.md](examples/curl.md), [postman/Developer_Landing_API.postman_collection.json](postman/Developer_Landing_API.postman_collection.json).
+
+Где посмотреть ответ AI локально без SMTP:
+
+- `storage/mail/user_*.txt` — копия пользователю (текст AI-ответа)
+- `storage/mail/owner_*.txt` — уведомление владельцу (тип, `AI available`)
 
 ## 5. AI-интеграция
 
 На каждый `POST /api/contact`:
 
 1. **Классификация** типа: `lead | question | bug | partnership | other`
-2. **Генерация ответа** пользователю (попадает в письмо-копию)
+2. **Генерация ответа** пользователю (попадает в письмо-копию и в JSON `ai_reply`)
+
+Клиент: `openai` SDK с опциональным `base_url` (`OPENAI_BASE_URL`), поэтому подходит OpenAI, OpenRouter и аналоги.
 
 ### Fallback
 
@@ -197,36 +228,39 @@ developer_landing/
 - `CLASSIFY_PROMPT`: JSON с `request_type` и `confidence`
 - `REPLY_PROMPT`: короткий вежливый ответ на русском без выдуманных обещаний
 
+Классификация сначала пробует `response_format=json_object`; если модель не поддерживает, повтор без него и парсинг JSON из текста.
+
 ## 6. Что сделано с помощью AI
 
 | Часть | Как | Что правил вручную |
 |---|---|---|
 | Каркас cookiecutter | CLI + зафиксированные ответы | Переход на SQLite, убрали psycopg/redis |
 | Contact services/views | Cursor | Контракты ответов, статусы, fallback |
+| OpenRouter / `base_url` | Cursor | Env, устойчивость classify без `json_object` |
 | Лендинг CSS/JS | Cursor | Визуал, UX состояний формы |
 | README / Postman | Cursor | Проверка фактов по коду |
 
-Типовые промпты в Cursor: "слой Controllers → Services → Repositories", "graceful AI fallback", "лендинг без generic purple/cream".
+Типовые промпты в Cursor: "слой Controllers → Services → Repositories", "graceful AI fallback", "OpenRouter через openai SDK", "лендинг без generic purple/cream".
 
 ## 7. Хранение данных
 
 | Данные | Где |
 |---|---|
-| Обращения | SQLite (`ContactRequest`) |
+| Обращения | SQLite (`ContactRequest`: тип, `ai_reply`, флаги) |
 | Логи HTTP | `storage/logs/requests.log` (middleware) |
 | Rate limit | `storage/rate_limit/rate_limit.json` |
 | Метрики | `storage/metrics.json` + агрегаты из БД |
 | Письма без SMTP | `storage/mail/*.txt` |
 
-Rate limit: по умолчанию **5 запросов с IP за 15 минут**.
+Rate limit: по умолчанию **5 запросов с IP за 15 минут** (`RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_SECONDS`).
 
 ## Деплой на Render (бесплатно)
 
-GitHub Pages **не** хостит Django. Используйте Render Free Web Service.
+GitHub Pages не хостит Django. Используйте Render Free Web Service.
 
-1. Создайте GitHub-репозиторий и запушьте содержимое `developer_landing/`.
+1. Запушьте репозиторий на GitHub.
 2. На [render.com](https://render.com): New → Web Service → подключите репозиторий.
-3. Build command: `./build.sh` (или `pip install -r requirements.txt && python manage.py collectstatic --no-input && python manage.py migrate --no-input`).
+3. Build command: `./build.sh`
 4. Start command: `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT`
 5. Environment:
 
@@ -236,10 +270,12 @@ DJANGO_SECRET_KEY=<длинный секрет>
 DJANGO_ALLOWED_HOSTS=.onrender.com
 PYTHON_VERSION=3.12.8
 OPENAI_API_KEY=<ваш ключ>
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_MODEL=openrouter/free
 CONTACT_OWNER_EMAIL=<ваш email>
 ```
 
-Можно использовать `render.yaml` как Blueprint.
+Можно использовать `render.yaml` как Blueprint (добавьте `OPENAI_BASE_URL` / `OPENAI_MODEL` в env вручную, если Blueprint их ещё не содержит).
 
 После деплоя проверьте:
 
@@ -248,6 +284,8 @@ CONTACT_OWNER_EMAIL=<ваш email>
 - `https://<app>.onrender.com/api/docs/`
 
 Free tier засыпает после простоя: первый запрос может идти 30–60 секунд.
+
+**Публичный URL:** будет добавлен после деплоя на Render (`https://developer-landing-xxxx.onrender.com`).
 
 Если деплой недоступен, достаточно локального запуска по инструкции выше + Postman/curl.
 

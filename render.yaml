@@ -3,8 +3,10 @@ services:
     name: developer-landing
     runtime: python
     plan: free
+    region: frankfurt
     buildCommand: "./build.sh"
     startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT"
+    healthCheckPath: /api/health
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.render
@@ -12,9 +14,23 @@ services:
         generateValue: true
       - key: DJANGO_ALLOWED_HOSTS
         value: .onrender.com
+      - key: DJANGO_DEBUG
+        value: "False"
       - key: PYTHON_VERSION
         value: "3.12.8"
+      - key: OPENAI_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: OPENAI_MODEL
+        value: openrouter/free
+      - key: OPENAI_TIMEOUT_SECONDS
+        value: "30"
       - key: OPENAI_API_KEY
         sync: false
       - key: CONTACT_OWNER_EMAIL
         sync: false
+      - key: CORS_ALLOW_ALL_ORIGINS
+        value: "True"
+      - key: RATE_LIMIT_MAX
+        value: "5"
+      - key: RATE_LIMIT_WINDOW_SECONDS
+        value: "900"
