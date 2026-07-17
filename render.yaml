@@ -28,6 +28,18 @@ services:
         sync: false
       - key: CONTACT_OWNER_EMAIL
         sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DJANGO_DEFAULT_FROM_EMAIL
+        sync: false
       - key: CORS_ALLOW_ALL_ORIGINS
         value: "True"
       - key: RATE_LIMIT_MAX
