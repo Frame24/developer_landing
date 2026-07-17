@@ -261,7 +261,7 @@ GitHub Pages не хостит Django. Используйте Render Free Web Se
 1. Запушьте репозиторий на GitHub.
 2. На [render.com](https://render.com): New → Web Service → подключите репозиторий.
 3. Build command: `./build.sh`
-4. Start command: `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT`
+4. Start command: `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --timeout 120 --workers 2`
 5. Environment:
 
 ```
