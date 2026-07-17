@@ -2,6 +2,7 @@ from django.urls import path
 
 from developer_landing.contact.views import ContactCreateView
 from developer_landing.contact.views import HealthView
+from developer_landing.contact.views import MailInboxView
 from developer_landing.contact.views import MetricsView
 
 app_name = "contact"
@@ -13,5 +14,6 @@ urlpatterns = [
     path("health/", HealthView.as_view(), name="health-slash"),
     path("metrics", MetricsView.as_view(), name="metrics"),
     path("metrics/", MetricsView.as_view(), name="metrics-slash"),
+    path("mail", MailInboxView.as_view(), name="mail-inbox"),
+    path("mail/", MailInboxView.as_view(), name="mail-inbox-slash"),
 ]
-

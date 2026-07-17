@@ -13,6 +13,7 @@ from developer_landing.contact.serializers import ContactSerializer
 from developer_landing.contact.services.ai_service import AIService
 from developer_landing.contact.services.contact_service import ContactService
 from developer_landing.contact.services.email_service import EmailService
+from developer_landing.contact.services.mail_inbox_service import MailInboxService
 from developer_landing.contact.services.metrics_service import MetricsService
 from developer_landing.contact.services.rate_limit_service import RateLimitService
 
@@ -86,6 +87,7 @@ class ContactCreateView(APIView):
                     "ai_reply": result.ai_reply,
                     "email_via_smtp": result.email_via_smtp,
                     "email_queued": result.email_queued,
+                    "email_delivery_to": result.email_delivery_to,
                     "rate_limit_remaining": rate.remaining,
                 },
             },
@@ -100,6 +102,7 @@ class HealthView(APIView):
     @extend_schema(responses={200: dict})
     def get(self, request):
         ai = AIService()
+        inbox = MailInboxService().list_recent(limit=5)
         return Response(
             {
                 "success": True,
@@ -107,6 +110,8 @@ class HealthView(APIView):
                     "status": "ok",
                     "ai_configured": ai.is_configured(),
                     "smtp_configured": EmailService().is_configured(),
+                    "email_demo_force_to": settings.EMAIL_DEMO_FORCE_TO or None,
+                    "mail_stored_recent": inbox["count"],
                     "debug": settings.DEBUG,
                 },
             },
@@ -123,5 +128,27 @@ class MetricsView(APIView):
             {
                 "success": True,
                 "data": MetricsService().snapshot(),
+            },
+        )
+
+
+class MailInboxView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @extend_schema(
+        responses={200: dict},
+        description="Демо-лента сохранённых писем (owner + AI reply copies).",
+    )
+    def get(self, request):
+        try:
+            limit = int(request.query_params.get("limit", 20))
+        except (TypeError, ValueError):
+            limit = 20
+        limit = max(1, min(limit, 50))
+        return Response(
+            {
+                "success": True,
+                "data": MailInboxService().list_recent(limit=limit),
             },
         )

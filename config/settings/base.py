@@ -265,6 +265,8 @@ OPENAI_BASE_URL = env("OPENAI_BASE_URL", default="")
 OPENAI_MODEL = env("OPENAI_MODEL", default="gpt-4o-mini")
 OPENAI_TIMEOUT_SECONDS = env.int("OPENAI_TIMEOUT_SECONDS", default=20)
 CONTACT_OWNER_EMAIL = env("CONTACT_OWNER_EMAIL", default="hks@example.com")
+# When set (e.g. Resend test mode), all SMTP goes only to this address.
+EMAIL_DEMO_FORCE_TO = env("EMAIL_DEMO_FORCE_TO", default="")
 DEFAULT_FROM_EMAIL = env(
     "DJANGO_DEFAULT_FROM_EMAIL",
     default="Developer Landing <noreply@localhost>",

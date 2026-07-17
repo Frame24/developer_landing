@@ -24,6 +24,7 @@ class ContactProcessResult:
     ai_reply: str | None
     email_via_smtp: bool
     email_queued: bool = False
+    email_delivery_to: str | None = None
 
 
 class ContactService:
@@ -87,4 +88,5 @@ class ContactService:
             ai_reply=ai_result.reply,
             email_via_smtp=email_result.sent_via_smtp,
             email_queued=email_result.smtp_queued,
+            email_delivery_to=email_result.delivery_to,
         )

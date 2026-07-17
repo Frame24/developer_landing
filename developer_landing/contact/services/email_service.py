@@ -18,6 +18,7 @@ class EmailResult:
     owner_saved: bool
     user_saved: bool
     smtp_queued: bool = False
+    delivery_to: str | None = None
 
 
 class EmailService:
@@ -32,6 +33,7 @@ class EmailService:
         ai_reply: str | None,
         ai_available: bool,
     ) -> EmailResult:
+        delivery_to = self.effective_delivery_address(email)
         owner_body = self._owner_body(
             name=name,
             phone=phone,
@@ -39,18 +41,37 @@ class EmailService:
             comment=comment,
             request_type=request_type,
             ai_available=ai_available,
+            delivery_to=delivery_to,
         )
         user_body = self._user_body(
             name=name,
             comment=comment,
             ai_reply=ai_reply,
             ai_available=ai_available,
+            original_email=email,
+            delivery_to=delivery_to,
         )
 
-        # Fast path for HTTP: save copies and return. SMTP goes to a background thread
-        # so the contact form is not blocked by slow/blocked mail providers.
-        owner_ok = self._save_to_file("owner", owner_body)
-        user_ok = self._save_to_file("user", user_body)
+        owner_ok = self._save_to_file(
+            "owner",
+            owner_body,
+            meta={
+                "kind": "owner",
+                "original_email": email,
+                "delivery_to": delivery_to,
+                "subject": f"[Contact] Новое обращение от {name}",
+            },
+        )
+        user_ok = self._save_to_file(
+            "user",
+            user_body,
+            meta={
+                "kind": "user_reply",
+                "original_email": email,
+                "delivery_to": delivery_to,
+                "subject": "Мы получили ваше обращение",
+            },
+        )
 
         smtp_queued = False
         if self.is_configured():
@@ -60,18 +81,17 @@ class EmailService:
                 kwargs={
                     "owner_subject": f"[Contact] Новое обращение от {name}",
                     "owner_body": owner_body,
-                    "owner_to": [settings.CONTACT_OWNER_EMAIL],
                     "user_subject": "Мы получили ваше обращение",
                     "user_body": user_body,
-                    "user_to": [email],
+                    "delivery_to": delivery_to,
                 },
                 daemon=True,
                 name="contact-smtp",
             )
             thread.start()
             logger.info(
-                "SMTP queued in background (owner=%s user=%s)",
-                settings.CONTACT_OWNER_EMAIL,
+                "SMTP queued in background (forced_to=%s original=%s)",
+                delivery_to,
                 email,
             )
 
@@ -80,14 +100,22 @@ class EmailService:
             owner_saved=owner_ok,
             user_saved=user_ok,
             smtp_queued=smtp_queued,
+            delivery_to=delivery_to,
         )
+
+    @staticmethod
+    def effective_delivery_address(original_email: str) -> str:
+        forced = (settings.EMAIL_DEMO_FORCE_TO or "").strip()
+        if forced:
+            return forced
+        return settings.CONTACT_OWNER_EMAIL or original_email
 
     def is_configured(self) -> bool:
         return bool(
             settings.EMAIL_HOST
             and settings.EMAIL_HOST_USER
             and settings.EMAIL_HOST_PASSWORD
-            and settings.CONTACT_OWNER_EMAIL
+            and (settings.EMAIL_DEMO_FORCE_TO or settings.CONTACT_OWNER_EMAIL)
         )
 
     def _smtp_configured(self) -> bool:
@@ -98,15 +126,14 @@ class EmailService:
         *,
         owner_subject: str,
         owner_body: str,
-        owner_to: list[str],
         user_subject: str,
         user_body: str,
-        user_to: list[str],
+        delivery_to: str,
     ) -> None:
         try:
-            self._send_smtp(subject=owner_subject, body=owner_body, to=owner_to)
-            self._send_smtp(subject=user_subject, body=user_body, to=user_to)
-            logger.info("SMTP background send OK to %s and %s", owner_to, user_to)
+            self._send_smtp(subject=owner_subject, body=owner_body, to=[delivery_to])
+            self._send_smtp(subject=user_subject, body=user_body, to=[delivery_to])
+            logger.info("SMTP background send OK to %s (owner+user_reply)", delivery_to)
         except Exception:
             logger.exception("SMTP background send failed")
 
@@ -119,13 +146,19 @@ class EmailService:
         )
         message.send(fail_silently=False)
 
-    def _save_to_file(self, prefix: str, body: str) -> bool:
+    def _save_to_file(self, prefix: str, body: str, *, meta: dict | None = None) -> bool:
         try:
             directory: Path = settings.STORAGE_MAIL_DIR
             directory.mkdir(parents=True, exist_ok=True)
             stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
             path = directory / f"{prefix}_{stamp}.txt"
-            path.write_text(body, encoding="utf-8")
+            header_lines = []
+            if meta:
+                for key, value in meta.items():
+                    header_lines.append(f"{key}: {value}")
+                header_lines.append("---")
+            content = "\n".join(header_lines + [body]) if header_lines else body
+            path.write_text(content, encoding="utf-8")
             return True
         except OSError:
             logger.exception("Failed to write mail fallback file")
@@ -140,8 +173,17 @@ class EmailService:
         comment: str,
         request_type: str | None,
         ai_available: bool,
+        delivery_to: str,
     ) -> str:
+        demo_note = ""
+        if settings.EMAIL_DEMO_FORCE_TO:
+            demo_note = (
+                f"[DEMO] SMTP доставка принудительно на {delivery_to} "
+                f"(Resend test mode без своего домена).\n"
+                f"Email из формы: {email}\n\n"
+            )
         return (
+            f"{demo_note}"
             "Новое обращение с лендинга\n\n"
             f"Имя: {name}\n"
             f"Телефон: {phone}\n"
@@ -158,11 +200,21 @@ class EmailService:
         comment: str,
         ai_reply: str | None,
         ai_available: bool,
+        original_email: str,
+        delivery_to: str,
     ) -> str:
         reply = ai_reply if ai_available and ai_reply else (
             "Спасибо за обращение! Мы получили ваше сообщение и ответим в ближайшее время."
         )
+        demo_note = ""
+        if settings.EMAIL_DEMO_FORCE_TO:
+            demo_note = (
+                f"[DEMO] Это копия ответа пользователю. "
+                f"В тестовом режиме Resend письмо уходит на {delivery_to}, "
+                f"а не на {original_email}.\n\n"
+            )
         return (
+            f"{demo_note}"
             f"Здравствуйте, {name}!\n\n"
             f"{reply}\n\n"
             "---\n"

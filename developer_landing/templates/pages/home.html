@@ -105,6 +105,24 @@
           <button class="btn btn-primary" type="submit" id="submit-btn">Отправить</button>
           <p id="form-status" class="form-status" role="status" aria-live="polite"></p>
         </form>
+
+        <aside class="api-demo" aria-label="Демо API">
+          <h3>Демо API</h3>
+          <p class="section-lead">
+            В тестовом режиме Resend оба письма (уведомление и ответ) уходят на
+            <code>hks9@yandex.ru</code>, какой бы email ни указали в форме.
+          </p>
+          <div class="api-demo-links">
+            <a href="/api/health" target="_blank" rel="noopener">GET /api/health</a>
+            <a href="/api/metrics" target="_blank" rel="noopener">GET /api/metrics</a>
+            <a href="/api/mail" target="_blank" rel="noopener">GET /api/mail</a>
+            <a href="/api/docs/" target="_blank" rel="noopener">Swagger</a>
+            <button type="button" class="btn btn-ghost" id="refresh-demo">Обновить</button>
+          </div>
+          <pre id="demo-health" class="api-demo-panel" aria-live="polite">health: …</pre>
+          <pre id="demo-metrics" class="api-demo-panel" aria-live="polite">metrics: …</pre>
+          <pre id="demo-mail" class="api-demo-panel" aria-live="polite">mail: …</pre>
+        </aside>
       </section>
     </main>
 

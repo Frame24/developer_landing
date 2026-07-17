@@ -30,6 +30,8 @@ services:
         sync: false
       - key: CONTACT_OWNER_EMAIL
         value: hks9@yandex.ru
+      - key: EMAIL_DEMO_FORCE_TO
+        value: hks9@yandex.ru
       - key: EMAIL_HOST
         value: smtp.resend.com
       - key: EMAIL_PORT
