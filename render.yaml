@@ -25,23 +25,23 @@ services:
       - key: OPENAI_TIMEOUT_SECONDS
         value: "15"
       - key: EMAIL_TIMEOUT
-        value: "8"
+        value: "15"
       - key: OPENAI_API_KEY
         sync: false
       - key: CONTACT_OWNER_EMAIL
-        value: tabletka2404@mail.ru
+        value: tabletka2404@gmail.com
       - key: EMAIL_HOST
-        value: smtp.mail.ru
+        value: smtp.gmail.com
       - key: EMAIL_PORT
         value: "587"
       - key: EMAIL_USE_TLS
         value: "True"
       - key: EMAIL_HOST_USER
-        value: tabletka2404@mail.ru
+        value: tabletka2400@gmail.com
       - key: EMAIL_HOST_PASSWORD
         sync: false
       - key: DJANGO_DEFAULT_FROM_EMAIL
-        value: Developer Landing <tabletka2404@mail.ru>
+        value: Developer Landing <tabletka2400@gmail.com>
       - key: CORS_ALLOW_ALL_ORIGINS
         value: "True"
       - key: RATE_LIMIT_MAX
