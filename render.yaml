@@ -27,19 +27,19 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: CONTACT_OWNER_EMAIL
-        sync: false
+        value: tabletka2401@mail.ru
       - key: EMAIL_HOST
-        sync: false
+        value: smtp.mail.ru
       - key: EMAIL_PORT
         value: "587"
       - key: EMAIL_USE_TLS
         value: "True"
       - key: EMAIL_HOST_USER
-        sync: false
+        value: tabletka2401@mail.ru
       - key: EMAIL_HOST_PASSWORD
         sync: false
       - key: DJANGO_DEFAULT_FROM_EMAIL
-        sync: false
+        value: Developer Landing <tabletka2401@mail.ru>
       - key: CORS_ALLOW_ALL_ORIGINS
         value: "True"
       - key: RATE_LIMIT_MAX
